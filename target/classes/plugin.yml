@@ -1,0 +1,9 @@
+name: ButcherItems
+version: 1.0.4
+api: 1.0.0
+main: net.butcheritems.butcheritems.ButcherItems
+author: BrunoJaegerK
+soft-depend:
+  - NPC
+  - LlamaPets
+  - Holograms
