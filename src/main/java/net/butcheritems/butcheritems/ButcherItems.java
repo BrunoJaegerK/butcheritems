@@ -21,8 +21,6 @@ public class ButcherItems extends PluginBase {
 
     private boolean pets = false;
     private boolean nametag = false;
-    private boolean holograms = false;
-
     private Announcement announcement;
     private final Set<Integer> announcements = new HashSet<>();
     private final Set<String> excludedEntities = new HashSet<>();
@@ -69,8 +67,6 @@ public class ButcherItems extends PluginBase {
         getServer().getPluginManager().getPlugins().forEach((s, p) -> {
             if (p.getName().equalsIgnoreCase("LlamaPets")) {
                 this.pets = true;
-            } else if (p.getName().equalsIgnoreCase("Holograms")) {
-                this.holograms = true;
             } else if (p.getName().equalsIgnoreCase("PlaceholderAPI")) {
                 registerPlaceholder();
             }
@@ -112,9 +108,8 @@ public class ButcherItems extends PluginBase {
 
         // PetteriM1 Holograms uses gt.creeperface.holograms.entity.HologramEntity.
         // Keep the Cloudburst Holograms package supported as well.
-        if (this.holograms && (
-                fullName.startsWith("gt.creeperface.holograms.entity.")
-                        || fullName.startsWith("me.onebone.holograms"))) {
+        if (fullName.startsWith("gt.creeperface.holograms.entity.")
+                || fullName.startsWith("me.onebone.holograms")) {
             return true;
         }
 
@@ -174,7 +169,7 @@ public class ButcherItems extends PluginBase {
             level.doChunkGarbageCollection();
         });
 
-        System.gc();
+        // Evita forzar un Full GC, que puede introducir pausas perceptibles en el servidor.
         return killed.get();
     }
 
