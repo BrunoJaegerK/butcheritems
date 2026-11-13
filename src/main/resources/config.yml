@@ -1,13 +1,23 @@
-# Time in seconds between the clear lags
+# Tiempo en segundos entre cada limpieza (mínimo: 1)
 Schedule: 300
 
-# Available: chat, title, actionbar
+# Tipos disponibles: chat, title, actionbar
 Announcement: title
 
-# Here you can disable/enable killing entities with nametags
+# Si está en true, las entidades con nombre personalizado se eliminan.
 KillEntitiesWithNametags: true
 
-# If you don't want any announcements set it to Announcements: []
+# Entidades que nunca serán eliminadas.
+# Acepta nombres como ZOMBIE, EntityZombie o el nombre completo de la clase.
+# Deja la lista vacía para no excluir entidades adicionales.
+ExcludedEntities: []
+
+# Mundos en los que ClearLag no realizará ninguna limpieza.
+# Los nombres no distinguen entre mayúsculas y minúsculas.
+ExcludedWorlds: []
+
+# Segundos restantes en los que se mostrará un anuncio.
+# Usa [] para desactivar los anuncios previos.
 Announcements:
   - 60
   - 30
@@ -18,7 +28,6 @@ Announcements:
   - 3
   - 2
   - 1
-
 
 Commands:
   Clearlag:
