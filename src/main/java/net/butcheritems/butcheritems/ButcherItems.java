@@ -10,6 +10,7 @@ import cn.nukkit.plugin.PluginBase;
 import cn.nukkit.utils.Config;
 import com.creeperface.nukkit.placeholderapi.api.PlaceholderAPI;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.butcheritems.butcheritems.commands.ClearLagCommand;
@@ -24,6 +25,8 @@ public class ButcherItems extends PluginBase {
 
     private Announcement announcement;
     private final Set<Integer> announcements = new HashSet<>();
+    private final Set<String> excludedEntities = new HashSet<>();
+    private final Set<String> excludedWorlds = new HashSet<>();
     private int seconds;
     private int schedule;
 
@@ -33,11 +36,26 @@ public class ButcherItems extends PluginBase {
         saveDefaultConfig();
         Config c = getConfig();
 
-        this.nametag = c.getBoolean("KillEntitiesWithNametags");
-        this.schedule = c.getInt("Schedule");
+        this.nametag = c.getBoolean("KillEntitiesWithNametags", true);
+        this.schedule = Math.max(1, c.getInt("Schedule", 300));
         this.seconds = this.schedule;
 
-        String announcementsConfig = c.getString("Announcement", "chat").toLowerCase();
+        this.excludedEntities.clear();
+        for (String entityName : c.getStringList("ExcludedEntities")) {
+            String normalized = normalizeEntityName(entityName);
+            if (!normalized.isEmpty()) {
+                this.excludedEntities.add(normalized);
+            }
+        }
+
+        this.excludedWorlds.clear();
+        for (String worldName : c.getStringList("ExcludedWorlds")) {
+            if (worldName != null && !worldName.trim().isEmpty()) {
+                this.excludedWorlds.add(worldName.trim().toLowerCase(Locale.ROOT));
+            }
+        }
+
+        String announcementsConfig = c.getString("Announcement", "chat").toLowerCase(Locale.ROOT);
         this.announcements.addAll(c.getIntegerList("Announcements"));
 
         if (announcementsConfig.equals("chat")) {
@@ -71,6 +89,42 @@ public class ButcherItems extends PluginBase {
         );
     }
 
+    private static String normalizeEntityName(String name) {
+        if (name == null) {
+            return "";
+        }
+
+        String normalized = name.trim();
+        int separator = Math.max(normalized.lastIndexOf('.'), normalized.lastIndexOf('$'));
+        if (separator >= 0) {
+            normalized = normalized.substring(separator + 1);
+        }
+        normalized = normalized.toUpperCase(Locale.ROOT);
+        if (normalized.startsWith("ENTITY")) {
+            normalized = normalized.substring("ENTITY".length());
+        }
+        return normalized;
+    }
+
+    private boolean isExcludedEntity(Entity entity) {
+        String simpleName = normalizeEntityName(entity.getClass().getSimpleName());
+        String fullName = entity.getClass().getName().toLowerCase(Locale.ROOT);
+
+        // PetteriM1 Holograms uses gt.creeperface.holograms.entity.HologramEntity.
+        // Keep the Cloudburst Holograms package supported as well.
+        if (this.holograms && (
+                fullName.startsWith("gt.creeperface.holograms.entity.")
+                        || fullName.startsWith("me.onebone.holograms"))) {
+            return true;
+        }
+
+        if (this.pets && fullName.contains("pet")) {
+            return true;
+        }
+
+        return this.excludedEntities.contains(simpleName);
+    }
+
     private void registerPlaceholder() {
         PlaceholderAPI api = PlaceholderAPI.getInstance();
         if (api == null) return;
@@ -86,22 +140,23 @@ public class ButcherItems extends PluginBase {
         AtomicInteger killed = new AtomicInteger();
 
         getServer().getLevels().forEach((i, level) -> {
+            String worldName = level.getName();
+            if (this.excludedWorlds.contains(worldName.toLowerCase(Locale.ROOT))) {
+                return;
+            }
+
             for (Entity entity : level.getEntities()) {
                 boolean kill = true;
 
-                // Mascotas
-                if (this.pets && entity.getClass().getName().contains("Pet")) {
+                // Integraciones y exclusiones configurables.
+                if (isExcludedEntity(entity)) {
                     kill = false;
                 }
-                // Holograms (CloudburstMC)
-                else if (this.holograms && entity.getClass().getName().startsWith("me.onebone.holograms")) {
-                    kill = false;
-                }
-                // Entidades con nombre
+                // Entidades con nombre.
                 else if (!this.nametag && entity.hasCustomName()) {
                     kill = false;
                 }
-                // Entidades protegidas
+                // Entidades protegidas por seguridad.
                 else if (entity instanceof EntityHuman
                         || entity instanceof EntityPainting
                         || entity instanceof EntityEndCrystal
